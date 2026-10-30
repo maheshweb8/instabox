@@ -1,1 +1,49 @@
 
+name: Instabox Keepalive
+
+on:
+  schedule:
+    # Runs automatically every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual run button
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      MACHINE_ID: m_agqt2gyftk6ezwalit4l24ru6q
+      API_BASE: https://api.instabox.sh
+    steps:
+      - name: Check machine status
+        id: check
+        run: |
+          STATUS=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.INSTABOX_API_KEY }}" \
+            "${{ env.API_BASE }}/v1/machines/${{ env.MACHINE_ID }}")
+          
+          HTTP_CODE=$(echo "$STATUS" | tail -1)
+          BODY=$(echo "$STATUS" | head -n -1)
+          
+          echo "HTTP: $HTTP_CODE"
+          echo "Body: $BODY"
+          
+          STATE=$(echo "$BODY" | jq -r '.state // .status // "unknown"')
+          echo "state=$STATE" >> "$GITHUB_OUTPUT"
+          echo "Machine state: $STATE"
+
+      - name: Start machine if paused
+        if: steps.check.outputs.state != 'running'
+        run: |
+          echo "Machine is ${{ steps.check.outputs.state }}, starting..."
+          
+          RESULT=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.INSTABOX_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "${{ env.API_BASE }}/v1/machines/${{ env.MACHINE_ID }}/start")
+          
+          echo "Start result: $RESULT"
+
+      - name: Already running
+        if: steps.check.outputs.state == 'running'
+        run: echo "✅ Machine is running, nothing to do."
