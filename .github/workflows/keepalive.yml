@@ -36,8 +36,10 @@ jobs:
         run: |
           echo "Machine is ${{ steps.check.outputs.state }}, starting..."
           
+          KEY="keepalive-$(date +%s)"
           RESULT=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.INSTABOX_API_KEY }}" \
+            -H "Idempotency-Key: $KEY" \
             -H "Content-Type: application/json" \
             "${{ env.API_BASE }}/v1/machines/${{ env.MACHINE_ID }}/start")
           
