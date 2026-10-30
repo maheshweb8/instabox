@@ -1,11 +1,10 @@
-
 name: Instabox Keepalive
 
 on:
+  push:
+  workflow_dispatch:
   schedule:
-    # Runs automatically every 10 minutes
     - cron: '*/10 * * * *'
-  workflow_dispatch: # Allows manual run button
 
 jobs:
   keepalive:
